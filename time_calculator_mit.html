@@ -1,0 +1,312 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!--
+Eve Bashing Time Tool V0.4b
+Copyright (c) 2025 ArabicCharlie
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eve Bashing Time Tool V0.4b</title>
+    <link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;700&family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            margin: 20px;
+            text-align: center;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            background-color: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        h2, h3 {
+            font-family: 'Spectral', serif;
+            color: #00ccff;
+        }
+        label, input, select, button {
+            margin: 10px;
+        }
+        input[type="number"], input[type="date"], input[type="time"] {
+            width: 120px;
+            padding: 5px;
+            background-color: #3a3a3a;
+            color: #e0e0e0;
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+        }
+        select {
+            width: 150px;
+            padding: 5px;
+            background-color: #3a3a3a;
+            color: #e0e0e0;
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #00ccff;
+            color: #1a1a1a;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Montserrat', sans-serif;
+        }
+        button:hover {
+            background-color: #00aaff;
+        }
+        .output {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #333333;
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+        }
+        input[readonly] {
+            width: 300px;
+            padding: 5px;
+            background-color: #3a3a3a;
+            color: #e0e0e0;
+            border: 1px solid #4a4a4a;
+            border-radius: 4px;
+        }
+        .note {
+            font-size: 0.9em;
+            color: #a0a0a0;
+        }
+        span {
+            color: #e0e0e0;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 0.8em;
+            color: #a0a0a0;
+        }
+        .footer a {
+            color: #00ccff;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Eve Bashing Time Tool V0.4b</h2>
+        <div>
+            <p>Current EVE Online Time (UTC): <span id="eveTime">Loading...</span></p>
+            <p>Current Local Time: <span id="localTime">Loading...</span></p>
+        </div>
+        <h3>Add Time to Current</h3>
+        <div>
+            <label for="hoursInput">Hours to Add:</label>
+            <input type="number" id="hoursInput" min="0" value="0">
+            <label for="minutesInput">Minutes to Add:</label>
+            <input type="number" id="minutesInput" min="0" value="0">
+        </div>
+        <button onclick="calculateFutureTimes()">Calculate Future Times</button>
+        <div class="output">
+            <p>Future EVE Online Time: <input type="text" id="futureEveTime" readonly></p>
+            <p>Future Local Time: <input type="text" id="futureLocalTime" readonly></p>
+            <p>Future Local Time (Discord Timestamp): <input type="text" id="epochTime" readonly></p>
+        </div>
+        <h3>Convert Specific Date/Time</h3>
+        <div>
+            <label for="specificDate">Date:</label>
+            <input type="date" id="specificDate">
+            <label for="specificTime">Time:</label>
+            <input type="time" id="specificTime">
+            <label for="inputTimeZone">Input Time Zone:</label>
+            <select id="inputTimeZone">
+                <option value="UTC" selected>GMT (UTC)</option>
+                <option value="America/New_York">Eastern Time (America/New_York)</option>
+                <option value="America/Chicago">Central Time (America/Chicago)</option>
+                <option value="America/Denver">Mountain Time (America/Denver)</option>
+                <option value="America/Los_Angeles">Pacific Time (America/Los_Angeles)</option>
+                <option value="Europe/London">London (Europe/London)</option>
+                <option value="Europe/Paris">Paris (Europe/Paris)</option>
+                <option value="Asia/Tokyo">Tokyo (Asia/Tokyo)</option>
+                <option value="Australia/Sydney">Sydney (Australia/Sydney)</option>
+            </select>
+            <label for="outputTimeZone">Output Time Zone:</label>
+            <select id="outputTimeZone">
+                <option value="UTC" selected>GMT (UTC)</option>
+                <option value="America/New_York">Eastern Time (America/New_York)</option>
+                <option value="America/Chicago">Central Time (America/Chicago)</option>
+                <option value="America/Denver">Mountain Time (America/Denver)</option>
+                <option value="America/Los_Angeles">Pacific Time (America/Los_Angeles)</option>
+                <option value="Europe/London">London (Europe/London)</option>
+                <option value="Europe/Paris">Paris (Europe/Paris)</option>
+                <option value="Asia/Tokyo">Tokyo (Asia/Tokyo)</option>
+                <option value="Australia/Sydney">Sydney (Australia/Sydney)</option>
+            </select>
+        </div>
+        <p class="note">Output will be in the selected output time zone, with Discord timestamp matching the converted time.</p>
+        <button onclick="convertSpecificTime()">Convert Specific Time</button>
+        <div class="output">
+            <p>Converted Time (Selected Time Zone): <input type="text" id="convertedLocalTime" readonly></p>
+            <p>Converted Time (Discord Timestamp): <input type="text" id="convertedEpochTime" readonly></p>
+        </div>
+        <div class="footer">
+            Developed by <a href="https://github.com/ArabicCharlie" target="_blank">ArabicCharlie</a>. Licensed under the <a href="https://opensource.org/licenses/MIT" target="_blank">MIT License</a>.
+        </div>
+    </div>
+
+    <script>
+        // Update current times every second
+        function updateCurrentTimes() {
+            const now = new Date();
+            const eveTime = now.toUTCString();
+            document.getElementById('eveTime').textContent = eveTime;
+            const localTime = now.toLocaleString('en-US', { 
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+            document.getElementById('localTime').textContent = localTime;
+        }
+
+        // Calculate future times based on hours and minutes input
+        function calculateFutureTimes() {
+            const hours = parseInt(document.getElementById('hoursInput').value) || 0;
+            const minutes = parseInt(document.getElementById('minutesInput').value) || 0;
+            const now = new Date();
+            const totalMilliseconds = (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
+            const futureTime = new Date(now.getTime() + totalMilliseconds);
+
+            document.getElementById('futureEveTime').value = futureTime.toUTCString();
+            document.getElementById('futureLocalTime').value = futureTime.toLocaleString('en-US', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+            const epochTime = Math.floor(futureTime.getTime() / 1000);
+            document.getElementById('epochTime').value = `<t:${epochTime}:F>`;
+        }
+
+        // Convert specific date/time from input time zone to output time zone and time
+        function convertSpecificTime() {
+            const dateInput = document.getElementById('specificDate').value;
+            const timeInput = document.getElementById('specificTime').value;
+            const inputTimeZone = document.getElementById('inputTimeZone').value;
+            const outputTimeZone = document.getElementById('outputTimeZone').value;
+
+            if (!dateInput || !timeInput) {
+                alert('Please enter both date and time.');
+                return;
+            }
+
+            // Parse input date/time
+            const [year, month, day] = dateInput.split('-').map(Number);
+            const [hour, minute] = timeInput.split(':').map(Number);
+
+            // Create a Date object assuming input is in UTC, then adjust for input time zone
+            const tempDate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+
+            // Get the offset of the input time zone
+            const inputFormatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: inputTimeZone,
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false
+            });
+            const formattedParts = inputFormatter.formatToParts(tempDate);
+            const parts = {};
+            formattedParts.forEach(part => {
+                parts[part.type] = part.value;
+            });
+
+            // Create UTC date from input time zone's perspective
+            const utcDate = new Date(
+                Date.UTC(
+                    parseInt(parts.year),
+                    parseInt(parts.month) - 1,
+                    parseInt(parts.day),
+                    parseInt(parts.hour),
+                    parseInt(parts.minute),
+                    parseInt(parts.second)
+                )
+            );
+
+            // Convert to output time zone for display
+            const outputFormatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: outputTimeZone,
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+            const convertedTime = outputFormatter.format(utcDate);
+            document.getElementById('convertedLocalTime').value = convertedTime;
+
+            // Use the UTC date for the Discord timestamp
+            const epochTime = Math.floor(utcDate.getTime() / 1000);
+            document.getElementById('convertedEpochTime').value = `<t:${epochTime}:F>`;
+        }
+
+        // Initialize current times and update every second
+        updateCurrentTimes();
+        setInterval(updateCurrentTimes, 1000);
+    </script>
+</body>
+</html>
